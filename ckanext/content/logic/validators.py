@@ -7,6 +7,7 @@ import ckan.plugins.toolkit as tk
 import ckan.types as types
 import ckan.lib.uploader as uploader
 from ckan.lib.munge import munge_title_to_name
+from ckan.common import _
 
 from ckanext.content.model.content import ContentModel
 
@@ -70,6 +71,13 @@ def alias_unique(
     if not result:
         return
 
+    if data.get(("content_id",)) or data.get(("__extras",)).get("content_id"):
+        content_id = data.get(("content_id",)) or data.get(("__extras",)).get(
+            "content_id"
+        )
+        if result.id == content_id:
+            return
+
     if data.get(("__extras",)) and data.get(("__extras",)).get("id"):
         current_content = ContentModel.get_by_id(
             data.get(("__extras",)).get("id")
@@ -99,10 +107,13 @@ def is_relative_path(
         )
         # return
 
-    if not re.fullmatch(r"/[A-Za-z0-9][A-Za-z0-9_\-/]*", value):
-        errors[key].append(
-            'Path must start with a slash followed by a letter or digit, and contain only letters, digits, "-", or "_".'
+    path_pattern = r"/[A-Za-z0-9][A-Za-z0-9_\-/]*"
+    if not re.fullmatch(path_pattern, value):
+        error_message = (
+            "Path must start with a slash followed by a letter or digit, "
+            'and contain only letters, digits, "-", or "_".'
         )
+        errors[key].append(error_message)
 
     if value.endswith("/"):
         errors[key].append('Should not end with "/".')

@@ -25,12 +25,24 @@
                             <a class="btn btn-outline-primary me-2" href="{{ h.url_for('ckan_content.list') }}">
                                 {{ _("Back") }}
                             </a>
+                            <a class="btn btn-secondary me-2" href="{{ h.url_for('ckan_content.copy', type=type, id=id) }}">
+                                <i class="fa fa-copy"></i> {{ _("Create Copy") }}
+                            </a>
                             <a class="btn btn-secondary me-2" href="{{ h.url_for('ckan_content.content_revisions', type=type, id=id) }}">
                                 {{ _("Revisions") }}
                             </a>
                             <a class="btn btn-secondary me-2" href="{{ h.url_for('ckan_content_translations.list', type=type, content_id=id) }}">
                                 {{ _("Translations") }}
                             </a>
+                            {% if h.content_has_draft(id) %}
+                                <a class="btn btn-secondary me-2" href="{{ h.url_for('ckan_content_draft.edit', type=type, content_id=id) }}">
+                                    {{ _("View Draft Content") }}
+                                </a>
+                            {% else %}
+                                <a class="btn btn-secondary me-2" href="{{ h.url_for('ckan_content_draft.create', type=type, content_id=id) }}">
+                                    {{ _("Create Draft Content") }}
+                                </a>
+                            {% endif %}
                             <a class="btn btn-primary" href="{{ h.url_for('ckan_content.read', type=type, id=id) }}">
                                 {{ _("View") }}
                             </a>

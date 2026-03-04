@@ -24,24 +24,32 @@
                                 {{ _("Create") }}
                             </button>
                             <div class="modal fade" id="content-creation" tabindex="-1" aria-labelledby="content-creation" aria-hidden="true">
-                                <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                    <h5 class="modal-title">Create</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">{{ _('Create Content') }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="row g-3">
+                                                {% for content in h.get_schemas_types() %}
+                                                    {% if h.check_access('create_ckan_content', {'type': content.type}) %}
+                                                        <div class="col-12 col-md-6">
+                                                            <a href="{{ h.url_for('ckan_content.create', type=content.type) }}" class="card h-100 text-decoration-none border-0 shadow-sm p-3">
+                                                                <div class="d-flex align-items-center mb-2">
+                                                                    <i class="fa fa-file-alt fa-2x text-primary me-2"></i>
+                                                                    <span class="fw-bold fs-5">{{ content.label }}</span>
+                                                                </div>
+                                                                {% if content.description %}
+                                                                    <div class="text-muted small">{{ content.description }}</div>
+                                                                {% endif %}
+                                                            </a>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="modal-body">
-                                        <ul>
-                                            {% for content in h.get_schemas_types() %}
-                                                <li class="mb-2">
-                                                    <a class="text-dark fw-bold fs-4" href="{{ h.url_for('ckan_content.create', type=content.type) }}">
-                                                        {{ content.label }}
-                                                    </a>
-                                                </li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
-                                </div>
                                 </div>
                             </div>
                         </div>
@@ -86,9 +94,14 @@
                                                     {{ item.title }}
                                                 </a>
                                             </td>
-                                            <td>{{ item.alias }}</td>
+                                            <td><a href="{{ item.alias }}" target="_blank">{{ item.alias }}</a></td>
                                             <td>{{ item.type }}</td>
-                                            <td>{{ item.state }}</td>
+                                            <td>
+                                                {% if item.state != 'active' %}
+                                                    <i class="fa fa-exclamation-triangle text-warning me-1"></i>
+                                                {% endif %}
+                                                {{ item.state }}
+                                            </td>
                                             <td>{{ h.render_datetime(item.modified, with_hours=True) }}</td>
                                             <td>
                                                 <a class="btn btn-outline-primary me-2" href="{{ h.url_for('ckan_content.read', type=item.type, id=item.id) }}">

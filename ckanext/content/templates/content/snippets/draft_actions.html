@@ -1,0 +1,13 @@
+{% if is_draft %}
+<div class="alert alert-info" role="alert">
+    <i class="fa fa-info-circle"></i>
+    {{ _("This is a draft preview. Changes have not been published yet.") }}
+</div>
+<div class="d-flex justify-content-end">
+    <div>
+        <a class="btn btn-primary" href="{{ h.url_for('ckan_content_draft.edit', type=type, content_id=content_id) }}">
+            {{ _("Edit Draft") }}
+        </a>
+    </div>
+</div>
+{% endif %}

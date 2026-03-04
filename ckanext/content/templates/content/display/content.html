@@ -20,7 +20,10 @@
                 {% block primary %}
                     {# ck-content class needed so the CKEditor styles are applied. #}
                     <div class="module-content ck-content">
-                        {%- snippet 'content/snippets/read_actions.html', type=type, id=id %}
+                        {%- snippet 'content/snippets/draft_actions.html', type=type, id=id, content_id=content_id, is_draft=is_draft %}
+                        {% if not is_draft %}
+                            {%- snippet 'content/snippets/read_actions.html', type=type, id=id %}
+                        {% endif %}
                         {%- set exclude_fields = [
                         'title',
                         'state',

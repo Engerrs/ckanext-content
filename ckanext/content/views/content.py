@@ -228,6 +228,62 @@ class DeleteView(MethodView):
         return tk.redirect_to("ckan_content.list")
 
 
+class CopyView(MethodView):
+    """Create a copy of existing content"""
+
+    def get(self, type: str, id: str):
+        content = ContentModel.get_by_id(id)
+
+        try:
+            tk.check_access(
+                "create_ckan_content", make_context(), {"type": type}
+            )
+        except tk.NotAuthorized:
+            return tk.abort(404, "Page not found")
+
+        if not content:
+            return tk.abort(404, "Content not found")
+
+        new_title = f"{content.title} Copy"
+        base_alias = f"{content.alias}-copy"
+
+        # Find unique alias
+        new_alias = base_alias
+        for i in range(100):
+            existing = ContentModel.get_by_alias(new_alias)
+            if not existing:
+                break
+            new_alias = f"{base_alias}-{i + 1}"
+        else:
+            tk.h.flash_error(
+                tk._("Unable to create copy: too many copies exist")
+            )
+            return tk.redirect_to("ckan_content.edit", type=type, id=id)
+
+        copy_data = {
+            "title": new_title,
+            "alias": new_alias,
+            "type": content.type,
+            "state": "draft",
+            "data": deepcopy(content.data) if content.data else {},
+            "author": tk.current_user.id,
+            "translations": (
+                deepcopy(content.translations) if content.translations else {}
+            ),
+        }
+
+        try:
+            new_content = ContentModel.create(copy_data)
+            tk.h.flash_success(tk._("Content copy created successfully"))
+            return tk.redirect_to(
+                "ckan_content.edit", type=type, id=new_content.id
+            )
+        except Exception as e:
+            model.Session.rollback()
+            tk.h.flash_error(tk._("Failed to create copy: {0}").format(str(e)))
+            return tk.redirect_to("ckan_content.edit", type=type, id=id)
+
+
 class ReadView(MethodView):
     def _check_access(self, type: str, id: str):
         try:
@@ -309,11 +365,7 @@ class ListView(MethodView):
         else:
             query = query.order_by(sort_field.desc())
 
-        query = (
-            query.offset((page - 1) * limit)
-            .limit(limit)
-            .all()
-        )
+        query = query.offset((page - 1) * limit).limit(limit).all()
 
         content = [item.dictize({}) for item in query]
 
@@ -393,6 +445,9 @@ content.add_url_rule(
 )
 content.add_url_rule(
     "/content/<type>/delete/<id>", view_func=DeleteView.as_view("delete")
+)
+content.add_url_rule(
+    "/content/<type>/copy/<id>", view_func=CopyView.as_view("copy")
 )
 content.add_url_rule(
     "/content/<type>/<id>", view_func=ReadView.as_view("read")

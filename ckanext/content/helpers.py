@@ -8,7 +8,6 @@ from typing import Any
 
 import ckan.plugins as p
 import ckan.plugins.toolkit as tk
-from ckan.common import _
 
 from ckanext.content import utils, loader, config
 from ckanext.content.types import Content
@@ -195,7 +194,7 @@ def content_translation_field(
         )
     else:
         lang = tk.h.lang()
-        if not lang in translations:
+        if lang not in translations:
             text = (
                 getattr(field, content)
                 if type == "obj"
@@ -236,3 +235,67 @@ def content_prepare_translation(content):
         )
 
     return content
+
+
+def content_has_draft(content_id: str) -> bool:
+    """Check if content has an existing draft"""
+    from ckanext.content.model.content_draft import ContentDraftModel
+
+    draft = ContentDraftModel.get_by_content_id(content_id)
+    return draft is not None
+
+
+def content_get_draft(content_id: str):
+    """Get draft for content if exists"""
+    from ckanext.content.model.content_draft import ContentDraftModel
+
+    draft = ContentDraftModel.get_by_content_id(content_id)
+    return draft.dictize({}) if draft else None
+
+
+def content_compare_with_draft(content_id: str, schema: dict):
+    """Compare content with its draft and return list of changes"""
+    from ckanext.content.model.content import ContentModel
+    from ckanext.content.model.content_draft import ContentDraftModel
+
+    content = ContentModel.get_by_id(content_id)
+    draft = ContentDraftModel.get_by_content_id(content_id)
+
+    if not content or not draft:
+        return []
+
+    changes = []
+
+    if schema:
+        content_dict = content.dictize({})
+        content_data = content_dict.pop("data", {})
+        content_dict.update(content_data)
+        draft_dict = draft.dictize({})
+        draft_data = draft_dict.pop("data", {})
+        draft_dict.update(draft_data)
+
+        for field in schema.get("content_fields", []):
+            field_name = field.get("field_name")
+            field_label = field.get("label", field_name)
+            field_type = field.get("field_type", "text")
+
+            if field_name == "state":
+                continue
+
+            content_value = (
+                content_dict.get(field_name) if content_dict else None
+            )
+            draft_value = draft_dict.get(field_name) if draft_dict else None
+
+            changes.append(
+                {
+                    "field": field_name,
+                    "label": field_label,
+                    "old_value": content_value,
+                    "new_value": draft_value,
+                    "field_type": field_type,
+                    "changed": content_value != draft_value,
+                }
+            )
+
+    return changes

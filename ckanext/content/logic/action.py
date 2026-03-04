@@ -13,6 +13,7 @@ import ckan.model as model
 from ckanext.content import utils, types as content_types
 from ckanext.content.model.content import ContentModel
 from ckanext.content.model.content_revision import ContentRevisionModel
+from ckanext.content.model.content_draft import ContentDraftModel
 
 
 ValidationError = logic.ValidationError
@@ -48,7 +49,7 @@ def create_ckan_content(context, data_dict):
     if user:
         user_obj = model.User.by_name(six.ensure_text(user))
         if not user_obj:
-            raise logic.ValidationError({"author": [f"Missing Author"]})
+            raise logic.ValidationError({"author": ["Missing Author"]})
         data["author"] = user_obj.id
 
     content = ContentModel.create(data)
@@ -65,7 +66,6 @@ def create_ckan_content_translation(context, data_dict):
 
     if not content_id:
         raise logic.ValidationError({"content_id": ["Missing Content ID"]})
-    user = context["user"]
 
     original_fields = schema["content_fields"]
     for_translation_only = [
@@ -198,4 +198,185 @@ def get_content(context: types.Context, data_dict: types.DataDict):
         content = cast(ContentModel, ContentModel.get_by_id(data_dict["id"]))
         if content:
             return content
+    return None
+
+
+# Content Draft Actions
+
+
+def create_ckan_content_draft(
+    context: types.Context, data_dict: types.DataDict
+) -> ContentDraftModel:
+    """Create draft from existing content"""
+    content_id = data_dict.get("content_id")
+
+    tk.check_access(
+        "edit_ckan_content",
+        context,
+        {"id": content_id, "type": data_dict.get("type")},
+    )
+
+    content = cast(ContentModel, ContentModel.get_by_id(content_id))
+    if not content:
+        raise logic.NotFound("Content not found")
+
+    existing_draft = ContentDraftModel.get_by_content_id(content_id)
+    if existing_draft:
+        raise logic.ValidationError(
+            {"content_id": ["Draft already exists for this content"]}
+        )
+
+    draft_data = {
+        "content_id": content_id,
+        "title": content.title,
+        "alias": content.alias,
+        "type": content.type,
+        "author": content.author,
+        "state": "draft",
+        "data": content.data,
+        "translations": content.translations,
+    }
+
+    draft = ContentDraftModel.create(draft_data)
+    model.Session.commit()
+
+    return draft
+
+
+def update_ckan_content_draft(
+    context: types.Context, data_dict: types.DataDict
+) -> ContentDraftModel:
+    """Update draft content"""
+    content_id = data_dict.get("content_id", "")
+    schema = data_dict.get("schema", {})
+    data = data_dict.get("form_data", {})
+
+    tk.check_access(
+        "edit_ckan_content",
+        context,
+        {"id": content_id, "type": data_dict.get("type")},
+    )
+
+    draft = ContentDraftModel.get_by_content_id(content_id)
+    if not draft:
+        raise logic.NotFound("Draft not found")
+
+    data["content_id"] = content_id
+
+    prepared_schema = utils.prepare_schema_validation(schema, data)
+
+    context["schema"] = schema
+
+    result, errors = dict_fns.validate(data, prepared_schema, context)
+
+    if errors:
+        raise logic.ValidationError(errors)
+
+    if "__extras" in result:
+        result.pop("__extras")
+
+    result.pop("content_id", None)
+
+    title = result.pop("title")
+    alias = result.pop("alias")
+
+    update_data = {
+        "title": title,
+        "alias": alias,
+        "type": schema["content_type"],
+        "state": "draft",
+        "data": result,
+    }
+
+    draft.update(update_data)
+    model.Session.commit()
+
+    return draft
+
+
+def delete_ckan_content_draft(
+    context: types.Context, data_dict: types.DataDict
+) -> bool:
+    """Delete draft content"""
+    content_id = data_dict.get("content_id", "")
+
+    tk.check_access(
+        "edit_ckan_content",
+        context,
+        {"id": content_id, "type": data_dict.get("type")},
+    )
+
+    draft = ContentDraftModel.get_by_content_id(content_id)
+    if not draft:
+        raise logic.NotFound("Draft not found")
+
+    draft.delete()
+    model.Session.commit()
+
+    return True
+
+
+def merge_ckan_content_draft(
+    context: types.Context, data_dict: types.DataDict
+) -> ContentModel:
+    """Merge draft into original content"""
+    content_id = data_dict.get("content_id", "")
+
+    tk.check_access(
+        "edit_ckan_content",
+        context,
+        {"id": content_id, "type": data_dict.get("type")},
+    )
+
+    draft = ContentDraftModel.get_by_content_id(content_id)
+    if not draft:
+        raise logic.NotFound("Draft not found")
+
+    content = cast(ContentModel, ContentModel.get_by_id(content_id))
+    if not content:
+        raise logic.NotFound("Content not found")
+
+    # Create revision before merging
+    revision_data = dict(content.dictize({}))
+    revision_data["content_id"] = revision_data.pop("id")
+    revision_data.pop("translations")
+    ContentRevisionModel.create(revision_data)
+
+    # Copy draft data to content
+    update_data = {
+        "title": draft.title,
+        "alias": draft.alias,
+        "type": draft.type,
+        "state": content.state,
+        "data": draft.data,
+    }
+
+    content.update(update_data)
+
+    # Delete draft after successful merge
+    draft.delete()
+
+    ContentRevisionModel.limit_revisions_amount(content_id)
+    model.Session.commit()
+
+    return content
+
+
+@tk.side_effect_free
+def get_ckan_content_draft(
+    context: types.Context, data_dict: types.DataDict
+) -> content_types.Content | None:
+    """Get draft by content_id"""
+    content_id = data_dict.get("content_id")
+
+    tk.check_access(
+        "edit_ckan_content",
+        context,
+        {"id": content_id, "type": data_dict.get("type")},
+    )
+
+    if content_id:
+        draft = ContentDraftModel.get_by_content_id(content_id)
+        if draft:
+            return draft.dictize(context)
     return None

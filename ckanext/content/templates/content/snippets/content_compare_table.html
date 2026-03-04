@@ -1,0 +1,45 @@
+{% if changes %}
+<p>{{ _("The following changes will be applied to the published content:") }}</p>
+<div class="table-responsive">
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th style="width: 25%;">{{ _("Field") }}</th>
+                <th style="width: 37.5%;">{{ _("Current Value") }}</th>
+                <th style="width: 37.5%;">{{ _("New Value") }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for change in changes %}
+            <tr>
+                <td><strong>{{ change.label }}</strong></td>
+                <td class="bg-light">
+                    {% if change.old_value %}
+                    <div class="text-break">{{ change.old_value }}</div>
+                    {% else %}
+                    <em class="text-muted">{{ _("(empty)") }}</em>
+                    {% endif %}
+                </td>
+                <td class="{% if change.changed %}bg-success{% endif %} bg-opacity-10">
+                    {% if change.new_value %}
+                    <div class="text-break">{{ change.new_value }}</div>
+                    {% else %}
+                    <em class="text-muted">{{ _("(empty)") }}</em>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="alert alert-warning mt-3">
+    <i class="fa fa-exclamation-triangle"></i>
+    {{ _("State field will be used from the original content, so if its Published, it will stay so.") }}
+</div>
+<div class="alert alert-warning mt-3">
+    <i class="fa fa-exclamation-triangle"></i>
+    {{ _("This will create a new revision of the content before applying changes.") }}
+</div>
+{% else %}
+<p class="text-muted">{{ _("No changes detected between the draft and published content.") }}</p>
+{% endif %}

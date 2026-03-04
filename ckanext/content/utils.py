@@ -11,14 +11,14 @@ REDIS_CONTENT_PRESETS_KEY = "ckan_content_presets_global"
 
 def get_content_redis_key(name: str) -> str:
     """
-    Generate a Redis key by combining a prefix, the provided name, and a suffix.
+    Generate a Redis key by combining a prefix, the provided name and a suffix.
     """
     return REDIS_CONTENT_SCHEMA_PREFIX + name
 
 
 def get_content_presets_key() -> str:
     """
-    Generate a Redis key by combining a prefix, the provided name, and a suffix.
+    Generate a Redis key by combining a prefix, the provided name and a suffix.
     """
     return REDIS_CONTENT_PRESETS_KEY
 

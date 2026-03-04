@@ -1,0 +1,106 @@
+{% extends "content/page.html" %}
+
+{% import 'macros/form.html' as form %}
+
+{% block title %}
+    {{ _("Edit Draft Content") }}
+{% endblock %}
+
+{% block breadcrumb_content %}
+    {{ super() }}
+    <li><a href="{{ h.url_for('ckan_content_draft.edit', type=type, content_id=content_id) }}">{{ _("Edit Draft") }} {{ schema.label }}</a></li>
+{% endblock %}
+
+{%- block content %}
+    {% block maintag %}<div class="main content-main">{% endblock %}
+    <div id="content" class="content-page container">
+        {% block main_content %}
+            {% block flash %}{{ super() }}{% endblock %}
+            {% block toolbar %}{{ super() }}{% endblock %}
+
+            <div class="content-wrapper">
+                {% block primary %}
+                <div class="module-content">
+                        <div class="alert alert-info" role="alert">
+                            <i class="fa fa-info-circle"></i>
+                            {{ _("You are editing a draft. Changes will not affect the published content until you merge the draft.") }}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <a class="btn btn-outline-primary me-2" href="{{ h.url_for('ckan_content.edit', type=type, id=content_id) }}">
+                                    {{ _("Back to Content") }}
+                                </a>
+                                <a class="btn btn-secondary me-2" href="{{ h.url_for('ckan_content_draft.read', type=type, content_id=content_id) }}">
+                                    {{ _("View Draft") }}
+                                </a>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#mergeDraftModal">
+                                    <i class="fa fa-check"></i> {{ _("Merge Draft") }}
+                                </button>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDraftModal">
+                                    <i class="fa fa-trash"></i> {{ _("Delete Draft") }}
+                                </button>
+                            </div>
+                        </div>
+                        {% snippet 'content/snippets/content_form.html', data=data, schema=schema, errors=errors %}
+                    </div>
+                {% endblock %}
+            </div>
+        {% endblock %}
+    </div>
+    <div class="modal fade" id="deleteDraftModal" tabindex="-1" aria-labelledby="deleteDraftModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteDraftModalLabel">{{ _("Delete Draft") }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>{{ _("Are you sure you want to delete this draft? This action cannot be undone.") }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _("Cancel") }}</button>
+                    <form method="post" action="{{ h.url_for('ckan_content_draft.delete', type=type, content_id=content_id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-danger">{{ _("Delete") }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% set changes = h.content_compare_with_draft(content_id, schema) %}
+    <div class="modal fade" id="mergeDraftModal" tabindex="-1" aria-labelledby="mergeDraftModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mergeDraftModalLabel">{{ _("Merge Draft Changes") }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    {% snippet 'content/snippets/content_compare_table.html', changes=changes %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _("Cancel") }}</button>
+                    <form method="post" action="{{ h.url_for('ckan_content_draft.merge', type=type, content_id=content_id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-primary" {% if not changes %}disabled{% endif %}>
+                            <i class="fa fa-code-branch"></i> {{ _("Merge") }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+
+{%- block scripts %}
+    {% asset 'content/content-admin-js' %}
+    {{ super() }}
+{% endblock -%}
+
+
+{%- block styles %}
+    {% asset 'content/content-admin-css' %}
+    {{ super() }}
+{% endblock %}

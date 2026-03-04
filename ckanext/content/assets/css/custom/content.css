@@ -9,3 +9,22 @@
         }
     }
 }
+
+.content-page .draft-diff-preview {
+    max-height: 100px;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.9em;
+}
+.content-page .modal-body .table td {
+    vertical-align: top;
+    padding: 0.75rem;
+}
+.content-page .modal-body .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+.content-page .bg-success.bg-opacity-10 {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
